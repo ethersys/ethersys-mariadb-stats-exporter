@@ -1,0 +1,16 @@
+on: 
+  push:
+    tags:
+      - '*'
+
+jobs:
+  release-linux:
+    name: release linux
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: wangyoucao577/go-release-action@v1.36
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        goos: linux
+        goarch: amd64
