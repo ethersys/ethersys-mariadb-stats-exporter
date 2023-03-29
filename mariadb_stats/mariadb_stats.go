@@ -60,3 +60,22 @@ func GetUsersStats() []statsRow {
     }
     return stats
 }
+
+func GetMemoryStats() float64 {
+	var memory_used float64
+	cfg := sqlConfig{}
+	if err := env.Parse(&cfg); err != nil {
+		log.Println("ERROR: GUS01 - %+v\n", err)
+	}
+    db, err := sqlx.Open("mysql", cfg.SQL_USER + ":" + cfg.SQL_PASSWORD + "@tcp(" + cfg.SQL_HOST + ":" + cfg.SQL_PORT + ")/information_schema")
+    if err != nil {
+        log.Println("ERROR: GUS02 - ", err.Error())
+    }
+    defer db.Close()
+    row := db.QueryRow("SELECT VARIABLE_VALUE FROM GLOBAL_STATUS WHERE VARIABLE_NAME = 'Memory_used';")
+    err = row.Scan(&memory_used)
+    if err !=nil {
+        log.Println("ERROR: GUS03 - ", err.Error())
+    }
+    return memory_used
+}

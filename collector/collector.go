@@ -12,6 +12,7 @@ type collectorConfig struct {
 }
 
 type RessourcesCollector struct {
+	MemoryUsed				*prometheus.Desc
 	TotalConnections		*prometheus.Desc
 	ConcurrentConnections	*prometheus.Desc
 	ConnectedTime			*prometheus.Desc
@@ -40,6 +41,10 @@ type RessourcesCollector struct {
 
 func NewRessourcesCollector() *RessourcesCollector {
 	return &RessourcesCollector{
+		MemoryUsed: prometheus.NewDesc("mariadb_stats_memory_used",
+			"Total Memory used by MariaDB.",
+			[]string{"node"}, nil,
+		),
 		TotalConnections: prometheus.NewDesc("mariadb_stats_total_connections",
 			"The number of connections created for this user.",
 			[]string{"user","node"}, nil,
@@ -140,6 +145,7 @@ func NewRessourcesCollector() *RessourcesCollector {
 }
 
 func (collector *RessourcesCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- collector.MemoryUsed
 	ch <- collector.TotalConnections
 	ch <- collector.ConcurrentConnections
 	ch <- collector.ConnectedTime
@@ -167,35 +173,38 @@ func (collector *RessourcesCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (collector *RessourcesCollector) Collect(ch chan<- prometheus.Metric) {
-	var stats = mariadb_stats.GetUsersStats()
+	var users_stats = mariadb_stats.GetUsersStats()
+	var memory_used = mariadb_stats.GetMemoryStats()
 	cfg := collectorConfig{}
 	if err := env.Parse(&cfg); err != nil {
 		log.Println("ERROR: COL01 - %+v\n", err)
 	}
-	for _, stat := range stats {
-		ch <- prometheus.MustNewConstMetric(collector.TotalConnections, prometheus.CounterValue, stat.TOTAL_CONNECTIONS, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.ConcurrentConnections, prometheus.CounterValue, stat.CONCURRENT_CONNECTIONS, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.ConnectedTime, prometheus.CounterValue, stat.CONNECTED_TIME, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.BusyTime, prometheus.CounterValue, stat.BUSY_TIME, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.CpuTime, prometheus.CounterValue, stat.CPU_TIME, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.BytesReceived, prometheus.CounterValue, stat.BYTES_RECEIVED, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.BytesSend, prometheus.CounterValue, stat.BYTES_SENT, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.BinlogBytesWritten, prometheus.CounterValue, stat.BINLOG_BYTES_WRITTEN, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.RowsRead, prometheus.CounterValue, stat.ROWS_READ, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.RowsSent, prometheus.CounterValue, stat.ROWS_SENT, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.RowsDeleted, prometheus.CounterValue, stat.ROWS_DELETED, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.RowsInserted, prometheus.CounterValue, stat.ROWS_INSERTED, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.RowsUpdated, prometheus.CounterValue, stat.ROWS_UPDATED, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.SelectCommands, prometheus.CounterValue, stat.SELECT_COMMANDS, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.UpdateCommands, prometheus.CounterValue, stat.UPDATE_COMMANDS, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.OtherCommands, prometheus.CounterValue, stat.OTHER_COMMANDS, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.CommitTransactions, prometheus.CounterValue, stat.COMMIT_TRANSACTIONS, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.RollbackTransactions, prometheus.CounterValue, stat.ROLLBACK_TRANSACTIONS, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.DeniedConnections, prometheus.CounterValue, stat.DENIED_CONNECTIONS, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.Lost_Connections, prometheus.CounterValue, stat.LOST_CONNECTIONS, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.AccessDenied, prometheus.CounterValue, stat.ACCESS_DENIED, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.EmptyQueries, prometheus.CounterValue, stat.EMPTY_QUERIES, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.TotalSslConnections, prometheus.CounterValue, stat.TOTAL_SSL_CONNECTIONS, stat.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.MaxStatementExceeded, prometheus.CounterValue, stat.MAX_STATEMENT_TIME_EXCEEDED, stat.USER, cfg.NODE)
+	ch <- prometheus.MustNewConstMetric(collector.MemoryUsed, prometheus.CounterValue, memory_used, cfg.NODE)
+	for _, user_stats := range users_stats {
+		ch <- prometheus.MustNewConstMetric(collector.TotalConnections, prometheus.CounterValue, user_stats.TOTAL_CONNECTIONS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.ConcurrentConnections, prometheus.CounterValue, user_stats.CONCURRENT_CONNECTIONS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.ConnectedTime, prometheus.CounterValue, user_stats.CONNECTED_TIME, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.BusyTime, prometheus.CounterValue, user_stats.BUSY_TIME, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.CpuTime, prometheus.CounterValue, user_stats.CPU_TIME, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.BytesReceived, prometheus.CounterValue, user_stats.BYTES_RECEIVED, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.BytesSend, prometheus.CounterValue, user_stats.BYTES_SENT, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.BinlogBytesWritten, prometheus.CounterValue, user_stats.BINLOG_BYTES_WRITTEN, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.RowsRead, prometheus.CounterValue, user_stats.ROWS_READ, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.RowsSent, prometheus.CounterValue, user_stats.ROWS_SENT, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.RowsDeleted, prometheus.CounterValue, user_stats.ROWS_DELETED, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.RowsInserted, prometheus.CounterValue, user_stats.ROWS_INSERTED, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.RowsUpdated, prometheus.CounterValue, user_stats.ROWS_UPDATED, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.SelectCommands, prometheus.CounterValue, user_stats.SELECT_COMMANDS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.UpdateCommands, prometheus.CounterValue, user_stats.UPDATE_COMMANDS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.OtherCommands, prometheus.CounterValue, user_stats.OTHER_COMMANDS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.CommitTransactions, prometheus.CounterValue, user_stats.COMMIT_TRANSACTIONS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.RollbackTransactions, prometheus.CounterValue, user_stats.ROLLBACK_TRANSACTIONS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.DeniedConnections, prometheus.CounterValue, user_stats.DENIED_CONNECTIONS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.Lost_Connections, prometheus.CounterValue, user_stats.LOST_CONNECTIONS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.AccessDenied, prometheus.CounterValue, user_stats.ACCESS_DENIED, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.EmptyQueries, prometheus.CounterValue, user_stats.EMPTY_QUERIES, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.TotalSslConnections, prometheus.CounterValue, user_stats.TOTAL_SSL_CONNECTIONS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.MaxStatementExceeded, prometheus.CounterValue, user_stats.MAX_STATEMENT_TIME_EXCEEDED, user_stats.USER, cfg.NODE)
 	}
+
 }
