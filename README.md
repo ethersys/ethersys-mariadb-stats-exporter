@@ -1,6 +1,6 @@
 # Prometheus exporter
 
-Prometheus exporter for MariaDB users statistics.
+Prometheus exporter for MariaDB users statistics (using USER_STATISTICS info <https://mariadb.com/kb/en/information-schema-user_statistics-table/>).
 
 ## Usage
 
