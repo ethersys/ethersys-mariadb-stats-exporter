@@ -182,7 +182,7 @@ func (collector *RessourcesCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(collector.MemoryUsed, prometheus.CounterValue, memory_used, cfg.NODE)
 	for _, user_stats := range users_stats {
 		ch <- prometheus.MustNewConstMetric(collector.TotalConnections, prometheus.CounterValue, user_stats.TOTAL_CONNECTIONS, user_stats.USER, cfg.NODE)
-		ch <- prometheus.MustNewConstMetric(collector.ConcurrentConnections, prometheus.CounterValue, user_stats.CONCURRENT_CONNECTIONS, user_stats.USER, cfg.NODE)
+		ch <- prometheus.MustNewConstMetric(collector.ConcurrentConnections, prometheus.GaugeValue, user_stats.CONCURRENT_CONNECTIONS, user_stats.USER, cfg.NODE)
 		ch <- prometheus.MustNewConstMetric(collector.ConnectedTime, prometheus.CounterValue, user_stats.CONNECTED_TIME, user_stats.USER, cfg.NODE)
 		ch <- prometheus.MustNewConstMetric(collector.BusyTime, prometheus.CounterValue, user_stats.BUSY_TIME, user_stats.USER, cfg.NODE)
 		ch <- prometheus.MustNewConstMetric(collector.CpuTime, prometheus.CounterValue, user_stats.CPU_TIME, user_stats.USER, cfg.NODE)
